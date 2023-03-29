@@ -25,14 +25,14 @@ router = APIRouter(prefix='/contacts', tags=["contacts"])
 # router = APIRouter(prefix='/tags', tags=["tags"])
 
 
-@router.get("/", response_model=List[ContactResponse], tags=['all_contacts'])
+@router.get("/", response_model=List[ContactResponse], tags=['all_contacts'])  # tags тільки для документації свагер 
 async def get_contacts(limit: int = Query(10, le=500), offset: int = 0, db: Session = Depends(get_db)):
     contacts = await repository_contacts.get_contacts(limit, offset, db)
 
     return contacts
 
 
-@router.get("/{contact_id}", response_model=ContactResponse, tags=['contact'])
+@router.get("/{contact_id}", response_model=ContactResponse, tags=['contact'])  # name = 'Повернути контакт' - для документації
 async def get_contact(contact_id: int = Path(ge=1), db: Session = Depends(get_db)):
     contact = await repository_contacts.get_contact(contact_id, db)
     if contact is None:
@@ -112,17 +112,17 @@ async def search_by_phone(phone: int, db: Session = Depends(get_db)):
 
 
 @router.get("/search_by_birthday_celebration_within_days/{days}", response_model=List[ContactResponse], tags=['search'])
-async def search_by_birthday_celebration_within_days(days: int, db: Session = Depends(get_db)):
-    contact = await repository_contacts.search_by_birthday_celebration_within_days(days, db)
-    if not contact:
+async def search_by_birthday_celebration_within_days(days: int, limit: int = Query(10, le=500), offset: int = 0, db: Session = Depends(get_db)):
+    contact = await repository_contacts.search_by_birthday_celebration_within_days(days, limit, offset, db)
+    if contact is None:  # NoConnection in database...
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
     
     return contact
 
 
 @router.get("/search_by_like_name/{name}", response_model=List[ContactResponse], tags=['search'])
-async def search_by_like_name(name: str, db: Session = Depends(get_db)):
-    contact = await repository_contacts.search_by_like_name(name, db)
+async def search_by_like_name(name: str, limit: int = Query(10, le=500), offset: int = 0, db: Session = Depends(get_db)):
+    contact = await repository_contacts.search_by_like_name(name, limit, offset, db)
     if contact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
     
@@ -130,8 +130,8 @@ async def search_by_like_name(name: str, db: Session = Depends(get_db)):
 
 
 @router.get("/search_by_like_last_name/{last_name}", response_model=List[ContactResponse], tags=['search'])
-async def search_by_like_last_name(last_name: str, db: Session = Depends(get_db)):
-    contact = await repository_contacts.search_by_like_last_name(last_name, db)
+async def search_by_like_last_name(last_name: str, limit: int = Query(10, le=500), offset: int = 0, db: Session = Depends(get_db)):
+    contact = await repository_contacts.search_by_like_last_name(last_name, limit, offset, db)
     if contact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
     
@@ -139,8 +139,8 @@ async def search_by_like_last_name(last_name: str, db: Session = Depends(get_db)
 
 
 @router.get("/search_by_like_email/{email}", response_model=List[ContactResponse], tags=['search'])
-async def search_by_like_email(email: str, db: Session = Depends(get_db)):
-    contact = await repository_contacts.search_by_like_email(email, db)
+async def search_by_like_email(email: str, limit: int = Query(10, le=500), offset: int = 0, db: Session = Depends(get_db)):
+    contact = await repository_contacts.search_by_like_email(email, limit, offset, db)
     if contact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
     
@@ -148,8 +148,8 @@ async def search_by_like_email(email: str, db: Session = Depends(get_db)):
 
 
 @router.get("/search_by_like_phone/{phone}", response_model=List[ContactResponse], tags=['search'])
-async def search_by_like_phone(phone: int, db: Session = Depends(get_db)):
-    contact = await repository_contacts.search_by_like_phone(phone, db)
+async def search_by_like_phone(phone: int, limit: int = Query(10, le=500), offset: int = 0, db: Session = Depends(get_db)):
+    contact = await repository_contacts.search_by_like_phone(phone, limit, offset, db)
     if contact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
     

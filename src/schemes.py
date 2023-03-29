@@ -10,17 +10,17 @@ from pydantic import BaseModel, Field, EmailStr  # poetry add pydantic[email] # 
 class ContactModel(BaseModel):
     name: str = Field(default='Unknown', min_length=2, max_length=30)
     last_name: str = Field(default='Unknown', min_length=2, max_length=40)
-    email: EmailStr  # str =  Field(default='Unknown@mail.com', min_length=6, max_length=30)  # i@i.ua
+    email: EmailStr  # str =  Field(default='Unknown@mail.com', min_length=6, max_length=30, regex=...)  # i@i.ua
     phone: int = Field(default=1, gt=0, le=9999999999999999)  # not started from 0 !!!
     birthday: date  # = Field(default=date.today())  # YYYY-MM-DD
     description: str = Field(default='-', max_length=3000)  # String
 
 
 class ContactResponse(ContactModel):
-    id: int = 1
+    id: int = 1  # якщо 0 дратує
 
-    class Config:
-        orm_mode = True
+    class Config:  # дружимо клас з відповідною моделлю з моделей ?
+        orm_mode = True  # дані повертаються з БД
 '''
 Атрибут orm_mode у класі Config використовується для увімкнення режиму ORM для цієї моделі. 
 Таким чином, атрибут orm_mode у класі Config дозволяє Pydantic автоматично генерувати модель 

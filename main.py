@@ -3,7 +3,7 @@ from typing import List
 
 from fastapi import FastAPI, Depends, HTTPException, status, Path, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text   # sqlalchemy по потрібні моделі
 import uvicorn
 
 from src.database.db_connect import get_db
@@ -30,10 +30,11 @@ async def root():  # є маршрутом за замовчуванням дл�
 
 
 @app.get("/api/healthchecker")
-def healthchecker(db: Session = Depends(get_db)):
+def healthchecker(db: Session = Depends(get_db)):  #  Спецкласс формує тип Session
+    """Перевірь чи піднявся контейнер(сервер БД)."""
     try:
-        # Make request
-        result = db.execute(text("SELECT 1")).fetchone()
+        # Make request (зрозуміло що не буде зловмисного колу, але через text сирий запит треба переганяти)
+        result = db.execute(text("SELECT 1")).fetchone()  # SELECT 1 - запит до БД, що знею все Ок
         if result is None:
             raise HTTPException(status_code=500, detail="Database is not configured correctly")
         return {"ALERT": "Welcome to FastAPI! System ready!"}

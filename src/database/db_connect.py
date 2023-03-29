@@ -2,7 +2,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
+#!!!!!!!!!!!!!!!! PostgreSQL
 # рядок з'єднання з базою даних (sqlite/PostgreSQL) за допомогою SQLAlchemy:
 # SQLite to RAM: # engine = create_engine('sqlite:///:memory:', echo=True)
 # https://www.sqlite.org/inmemorydb.html
@@ -12,9 +12,10 @@ SQLALCHEMY_DATABASE_URL = "sqlite:////1/sql_app.db"
 # SQLALCHEMY_DATABASE_URL = "postgresql+psycopg2://postgres:567234@localhost:5432/rest_app"
 
 # створення двигуна
-engine = create_engine(
+# для асинхронного використання різні користувачі повинні мати окремі потоки а не 1 і той самий 
+engine = create_engine(  
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-    )
+    ) # "check_same_thread": False - для SQLite сказати, щоб для з'єднання не використовувати 1 і той самий потік
 # створення фабрики сесій, яка використовується для створення сесій для взаємодії 
 # з базою даних. Фабрика SessionLocal налаштована так, 
 # щоб не виконувати автокомміт та автоскидання сесії, і прив'язана до двигуна, створеного раніше:
@@ -35,7 +36,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-# Dependency
+# Dependency - ін'єкція
 def get_db():  # повертає сесію з використанням фабрики SessionLocal. Сесія закривається при виході з функції з використанням блоку finally.
     db = SessionLocal()
     try:

@@ -4,6 +4,7 @@
 # Всі ці функції використовують SQLAlchemy ORM для взаємодії з базою даних.
 from datetime import date, timedelta
 from typing import List, Optional
+from fastapi import HTTPException, status
 
 from sqlalchemy.orm import Session
 
@@ -26,6 +27,11 @@ async def get_contact(contact_id: int, db: Session) -> Contact:
 async def create_contact(body: ContactModel, db: Session) -> Contact:
     """створення нового запису в базі даних. Бере об'єкт ContactModel і використовує інформацію з нього 
     для створення нового об'єкта Contact, потім додає його до сеансу і фіксує зміни в базі даних."""
+    contact = db.query(Contact).filter_by(email=body.email, phone=body.phone).first() or \
+                db.query(Contact).filter_by(name=body.name, last_name=body.last_name).first() 
+    if contact:  # raise формує свою відповідь взамін return (все що після - відміняється):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Duplicate data')
+    
     contact = Contact(**body.dict())
     db.add(contact)
     db.commit()
@@ -91,25 +97,25 @@ async def search_by_phone(phone: int, db: Session) -> Contact:
 
 
 # https://stackoverflow.com/questions/4926757/sqlalchemy-query-where-a-column-contains-a-substring
-async def search_by_like_name(part_name: str, db: Session) -> List[Contact]:
+async def search_by_like_name(part_name: str, limit: int, offset: int, db: Session) -> List[Contact]:
     """Функція використовується для пошуку запису за частковим співпадінням в імені."""
-    return db.query(Contact).filter(Contact.name.icontains(part_name)).all()
+    return db.query(Contact).filter(Contact.name.icontains(part_name)).limit(limit).offset(offset).all()
 
 
-async def search_by_like_last_name(part_last_name: str, db: Session) -> List[Contact]:
+async def search_by_like_last_name(part_last_name: str, limit: int, offset: int, db: Session) -> List[Contact]:
     """Функція використовується для пошуку запису за частковим співпадінням в прізвищем."""
-    return db.query(Contact).filter(Contact.last_name.icontains(part_last_name)).all() 
+    return db.query(Contact).filter(Contact.last_name.icontains(part_last_name)).limit(limit).offset(offset).all() 
 
 
-async def search_by_like_email(part_email: str, db: Session) -> List[Contact]:
+async def search_by_like_email(part_email: str, limit: int, offset: int, db: Session) -> List[Contact]:
     """Функція використовується для пошуку запису за частковим співпадінням в email."""
-    return db.query(Contact).filter(Contact.email.icontains(part_email)).all()
+    return db.query(Contact).filter(Contact.email.icontains(part_email)).limit(limit).offset(offset).all()
 
 
-async def search_by_like_phone(part_phone: int, db: Session) -> List[Contact]:
+async def search_by_like_phone(part_phone: int, limit: int, offset: int, db: Session) -> List[Contact]:
     """Функція використовується для пошуку запису за частковим співпадінням в phone."""
     # return db.query(Contact).filter(Contact.phone == phone).first()
-    return db.query(Contact).filter(Contact.phone.icontains(part_phone)).all()
+    return db.query(Contact).filter(Contact.phone.icontains(part_phone)).limit(limit).offset(offset).all()
 
 
 def fortunate(days: int, birthday: date, today: date) -> bool:  # async/await ?
@@ -125,7 +131,7 @@ def fortunate(days: int, birthday: date, today: date) -> bool:  # async/await ?
     # return date(year=birthday.year, month=today.month, day=today.day) - birthday <= timedelta(days)
 
 
-async def search_by_birthday_celebration_within_days(meantime: int, db: Session) -> List[Contact]:
+async def search_by_birthday_celebration_within_days(meantime: int, limit: int, offset: int, db: Session) -> List[Contact]:
     """Функція використовується для пошуку контактів, що святкуватимуть дні народження протягом наступних (meantime) днів."""
     contacts = db.query(Contact).all()
     current_date = date.today()
@@ -133,4 +139,4 @@ async def search_by_birthday_celebration_within_days(meantime: int, db: Session)
                   for contact in contacts 
                   if contact.birthday and fortunate(meantime, contact.birthday, current_date)]
 
-    return lucky_ones
+    return lucky_ones[offset:offset+limit]
