@@ -26,7 +26,7 @@ app.include_router(contacts.router, prefix='/api')
 
 @app.get("/")
 async def root():  # є маршрутом за замовчуванням для застосунку
-    return {"message": "Hello World"}
+    return {" Welcome! ": " The personal virtual assistant is ready to go, I'm kidding ^_^ "}
 
 
 @app.get("/api/healthchecker")
@@ -36,7 +36,7 @@ def healthchecker(db: Session = Depends(get_db)):
         result = db.execute(text("SELECT 1")).fetchone()
         if result is None:
             raise HTTPException(status_code=500, detail="Database is not configured correctly")
-        return {"message": "Welcome to FastAPI!"}
+        return {"ALERT": "Welcome to FastAPI! System ready!"}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="Error connecting to the database")
