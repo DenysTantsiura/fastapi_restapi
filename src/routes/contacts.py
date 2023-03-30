@@ -2,7 +2,7 @@
 from typing import List, Optional, Type
 
 from fastapi import APIRouter, Depends, HTTPException, status, Path, Query
-from fastapi_pagination import Page, add_pagination, paginate
+from fastapi_pagination import Page, add_pagination, paginate  # poetry add fastapi-pagination
 from sqlalchemy.orm import Session
 
 from src.database.db_connect import get_db

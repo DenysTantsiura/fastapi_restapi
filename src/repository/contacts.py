@@ -3,8 +3,9 @@ from datetime import date, timedelta
 from typing import List, Optional, Type
 
 from fastapi import HTTPException, status
+from fastapi_pagination import Page, add_pagination, paginate  # poetry add fastapi-pagination
+from sqlalchemy import cast, String
 from sqlalchemy.orm import Session
-from fastapi_pagination.ext.async_sqlalchemy import paginate  # poetry add fastapi-pagination
 
 from src.database.models import Contact
 from src.schemes import ContactModel, CatToNameModel
@@ -130,10 +131,11 @@ async def search_by_like_email(part_email: str,
 
 
 # https://stackoverflow.com/questions/23622993/postgresql-error-operator-does-not-exist-integer-character-varying
+# https://stackoverflow.com/questions/33946865/flask-sqlalchemy-postgresql-in-a-query-can-an-int-be-cast-to-a-string
 async def search_by_like_phone(part_phone: int,
                                db: Session) -> Optional[List[Contact]]:
     """To search for a record by a partial match in phone."""
-    return db.query(Contact).filter(Contact.phone.like(f'%{part_phone}%')).all()
+    return db.query(Contact).filter(cast(Contact.phone, String).icontains(str(part_phone))).all()
 
 
 def fortunate(days: int,
