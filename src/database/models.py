@@ -6,7 +6,7 @@ from src.database.db_connect import Base
 
 class Contact(Base):
     __tablename__: str = "contacts"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     name = Column(String(30), index=True)
     last_name = Column(String(40), index=True)
     email = Column(String(30), unique=True, index=True)
