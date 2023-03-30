@@ -3,12 +3,12 @@ from datetime import date, timedelta
 from typing import List, Optional, Type
 
 from fastapi import HTTPException, status
-from fastapi_pagination import Page, add_pagination, paginate  # poetry add fastapi-pagination
+from fastapi_pagination import Page, paginate  # poetry add fastapi-pagination
 from sqlalchemy import cast, String
 from sqlalchemy.orm import Session
 
 from src.database.models import Contact
-from src.schemes import ContactModel, CatToNameModel
+from src.schemes import ContactModel, CatToNameModel, ContactResponse
 
 
 async def get_contacts(limit: int,
@@ -125,9 +125,9 @@ async def search_by_like_last_name(part_last_name: str,
 
 
 async def search_by_like_email(part_email: str,
-                               db: Session) -> Optional[List[Contact]]:
+                               db: Session) -> Optional[Page[ContactResponse]]:
     """To search for a record by a partial match in an email."""
-    return db.query(Contact).filter(Contact.email.icontains(part_email)).all()
+    return paginate(db.query(Contact).filter(Contact.email.icontains(part_email)).all())
 
 
 # https://stackoverflow.com/questions/23622993/postgresql-error-operator-does-not-exist-integer-character-varying

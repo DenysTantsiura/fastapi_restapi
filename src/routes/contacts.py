@@ -150,7 +150,7 @@ async def search_by_like_email(email: str,
     if contact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
     
-    return paginate(contact)
+    return contact
 
 
 @router.get("/search_by_like_phone/{phone}", response_model=Page[ContactResponse], tags=['search'])
