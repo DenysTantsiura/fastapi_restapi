@@ -3,10 +3,12 @@ from datetime import date, timedelta
 from typing import List, Optional, Type
 
 from fastapi import HTTPException, status
+from fastapi_pagination import Page, paginate  # poetry add fastapi-pagination
+from sqlalchemy import cast, String
 from sqlalchemy.orm import Session
 
 from src.database.models import Contact
-from src.schemes import ContactModel, CatToNameModel
+from src.schemes import ContactModel, CatToNameModel, ContactResponse
 
 
 async def get_contacts(limit: int,
@@ -111,36 +113,29 @@ async def search_by_phone(phone: int,
 
 # https://stackoverflow.com/questions/4926757/sqlalchemy-query-where-a-column-contains-a-substring
 async def search_by_like_name(part_name: str,
-                              limit: int,
-                              offset: int,
                               db: Session) -> Optional[List[Contact]]:
     """To search for an entry by a partial match in the name."""
-    return db.query(Contact).filter(Contact.name.icontains(part_name)).limit(limit).offset(offset).all()
+    return db.query(Contact).filter(Contact.name.icontains(part_name)).all()
 
 
 async def search_by_like_last_name(part_last_name: str,
-                                   limit: int,
-                                   offset: int,
                                    db: Session) -> Optional[List[Contact]]:
     """To search for a record by a partial match in the last name."""
-    return db.query(Contact).filter(Contact.last_name.icontains(part_last_name)).limit(limit).offset(offset).all() 
+    return db.query(Contact).filter(Contact.last_name.icontains(part_last_name)).all() 
 
 
 async def search_by_like_email(part_email: str,
-                               limit: int,
-                               offset: int,
-                               db: Session) -> Optional[List[Contact]]:
+                               db: Session) -> Optional[Page[ContactResponse]]:
     """To search for a record by a partial match in an email."""
-    return db.query(Contact).filter(Contact.email.icontains(part_email)).limit(limit).offset(offset).all()
+    return paginate(db.query(Contact).filter(Contact.email.icontains(part_email)).all())
 
 
+# https://stackoverflow.com/questions/23622993/postgresql-error-operator-does-not-exist-integer-character-varying
+# https://stackoverflow.com/questions/33946865/flask-sqlalchemy-postgresql-in-a-query-can-an-int-be-cast-to-a-string
 async def search_by_like_phone(part_phone: int,
-                               limit: int,
-                               offset: int,
                                db: Session) -> Optional[List[Contact]]:
     """To search for a record by a partial match in phone."""
-    # return db.query(Contact).filter(Contact.phone == phone).first()
-    return db.query(Contact).filter(Contact.phone.icontains(part_phone)).limit(limit).offset(offset).all()
+    return db.query(Contact).filter(cast(Contact.phone, String).icontains(str(part_phone))).all()
 
 
 def fortunate(days: int,
@@ -157,9 +152,9 @@ def fortunate(days: int,
     return days_left.days <= days
 
 
+# https://github.com/uriyyo/fastapi-pagination
+# https://uriyyo-fastapi-pagination.netlify.app/
 async def search_by_birthday_celebration_within_days(meantime: int,
-                                                     limit: int,
-                                                     offset: int,
                                                      db: Session) -> Optional[List[Type[Contact]]]:
     """To find contacts celebrating birthdays in the next (meantime) days."""
     contacts = db.query(Contact).all()
@@ -170,4 +165,4 @@ async def search_by_birthday_celebration_within_days(meantime: int,
                   for contact in contacts 
                   if contact.birthday and fortunate(meantime, contact.birthday, current_date)]
 
-    return lucky_ones[offset:offset+limit]
+    return lucky_ones  # lucky_ones[offset:offset+limit]
