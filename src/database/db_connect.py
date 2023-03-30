@@ -1,45 +1,78 @@
 # підключення до бази даних (sqlite/PostgreSQL)
-from sqlalchemy import create_engine
+import configparser  # for work with *.ini (config.ini)
+import logging
+import pathlib
+from typing import Union
+
+from sqlalchemy import (
+    create_engine, 
+    Engine,
+    )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-#!!!!!!!!!!!!!!!! PostgreSQL
-# рядок з'єднання з базою даних (sqlite/PostgreSQL) за допомогою SQLAlchemy:
-# SQLite to RAM: # engine = create_engine('sqlite:///:memory:', echo=True)
-# https://www.sqlite.org/inmemorydb.html
-# SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"  # "sqlite:///./sql_app.db"
-SQLALCHEMY_DATABASE_URL = "sqlite:////1/sql_app.db"
-# SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
-# SQLALCHEMY_DATABASE_URL = "postgresql+psycopg2://postgres:567234@localhost:5432/rest_app"
+from sqlalchemy.orm import (
+    Session,
+    sessionmaker,
+    )
 
-# створення двигуна
-# для асинхронного використання різні користувачі повинні мати окремі потоки а не 1 і той самий 
-engine = create_engine(  
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-    ) # "check_same_thread": False - для SQLite сказати, щоб для з'єднання не використовувати 1 і той самий потік
-# створення фабрики сесій, яка використовується для створення сесій для взаємодії 
-# з базою даних. Фабрика SessionLocal налаштована так, 
-# щоб не виконувати автокомміт та автоскидання сесії, і прив'язана до двигуна, створеного раніше:
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-''' False - дає можливість працювати з транзакціями, де можна виконувати кілька операцій і або 
-підтвердити їх всі відразу commit, або відкотити rollback у разі помилки.
+from src.authentication import get_password
 
-Параметр autocommit - це режим, коли кожна операція з базою даних автоматично підтверджується (комітиться). 
-Тобто будь-які зміни, які ви вносите до бази даних, відразу ж стають активними і не можуть бути скасовані. 
-За замовчуванням для роботи з SQLAlchemy увімкнено режим автокомміту.
 
-Параметр autoflush - це режим, коли будь-які зміни, які ви вносите в об'єкти сесії, 
-автоматично відправляються в базу даних. Іншими словами, будь-які зміни, які ви вносите в об'єкти, 
-відразу ж стають активними і можуть бути помітні в базі даних. За замовчуванням для роботи 
-з SQLAlchemy увімкнено режим автоскидання.
-'''
+CONFIG_FILE = 'config.ini'
+
+logging.basicConfig(level=logging.DEBUG, format='%(threadName)s %(message)s')
+
+file_config = pathlib.Path(__file__).parent.parent.joinpath(CONFIG_FILE)  # try?
+config = configparser.ConfigParser()
+config.read(file_config)
+
+user = config.get('DB_DEV', 'user')
+password = config.get('DB_DEV', 'password')
+password = get_password()
+database = config.get('DB_DEV', 'db_name')
+host = config.get('DB_DEV', 'host')
+# port = config.get('DB_DEV', 'port')
+
+SQLALCHEMY_DATABASE_URL = url_to_db = f'postgresql+psycopg2://{user}:{password}@{host}/{database}'  # if try?
+
+
+def create_connection(*args, **kwargs) -> Union[int, tuple[Engine, Session]]:
+    """Create a database connection (session) to a PostgreSQL database (engine)."""
+    try:
+        # Робота з ORM починається зі створення об'єкта, що інкапсулює доступ до бази даних, 
+        # в SQLAlchemy він називається engine,  echo щоб бачити запити БД в консолі, 10- скільки конектів до БД
+        engine_ = create_engine(url_to_db, echo=True, pool_size=10)
+        # engine = create_engine(f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}')
+        #   dialect[+driver]://user:password@host/dbname[?key=value..]  # ? dbname = postgresql ?
+        # сесії, які приховують створення з'єднань з базою та дають можливість виконувати 
+        # кілька транзакцій одним запитом для економії ресурсів.
+        # створюємо клас DBSession, об'єкти якого є окремими сесіями доступу до бази даних. 
+        # Кожна така сесія може зберігати набір транзакцій і виконувати їх тільки коли це дійсно потрібно. 
+        # Таке "ледаче" виконання зменшує навантаження на базу та прискорює роботу програми.
+        db_session = sessionmaker(autocommit=False, autoflush=False, bind=engine_)
+        # Сесія в ORM — це об'єкт, за допомогою якого ви можете керувати, коли саме накопичені 
+        # зміни будуть застосовані до бази. Для цього є метод commit. Є методи для додавання 
+        # одного або кількох об'єктів до бази (add, add_all).
+        # session_ = db_session()
+        # logging.debug(f'=== STEP 1 - Engine is Ok: \n{engine_}')
+    
+    except Exception as error:  # except Error as error:
+        logging.error(f'Wrong connect. error:\n{error}')
+        return 1, 1
+
+    return engine_, db_session
+
+
+engine, SessionLocal = create_connection()
+
 
 Base = declarative_base()
 
 
 # Dependency - ін'єкція
-def get_db():  # повертає сесію з використанням фабрики SessionLocal. Сесія закривається при виході з функції з використанням блоку finally.
+def get_db():
+    """Returns a session using a factory: SessionLocal."""  
     db = SessionLocal()
     try:
         yield db
-    finally:
+    finally: # Сесія закривається при виході з функції з використанням блоку finally.
         db.close()

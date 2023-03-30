@@ -3,8 +3,9 @@ from sqlalchemy.orm import relationship
 
 from src.database.db_connect import Base, engine
 
+
 '''
-з використанням декларативної системи SQLAlchemy. Клас Base - це декларативний базовий клас, 
+Використання декларативної системи SQLAlchemy. Клас Base - це декларативний базовий клас, 
 що надається SQLAlchemy, який використовується для визначення структури класів 
 та наслідування від нього.'''
 class Contact(Base):
@@ -13,7 +14,7 @@ class Contact(Base):
     name = Column(String(30), index=True)
     last_name = Column(String(40), index=True)
     email = Column(String(30), unique=True, index=True)
-    phone = Column(Integer, unique=True, index=True)  # !!! type int no take arguments Integer(16) 
+    phone = Column(Integer, unique=True, index=True)  # ! type int no take arguments: Integer(16) 
     birthday = Column(Date, index=True)
     description = Column(String(3000))
 
@@ -22,6 +23,7 @@ class Contact(Base):
 Створивши файл з моделями, потрібно виконати процес міграції за допомогою alembic. 
 Насамперед необхідно ініціалізувати оточення alembic за допомогою команди:
 alembic init migrations
+...
 '''
 
 # class Owner(Base):

@@ -1,15 +1,16 @@
-# FastAPI + REST API example
+# FastAPI + REST API example (Contacts)
+# https://stackoverflow.com/questions/32311366/alembic-util-command-error-cant-find-identifier
 from typing import List
 
 from fastapi import FastAPI, Depends, HTTPException, status, Path, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import text   # sqlalchemy по потрібні моделі
+from sqlalchemy import text   # sqlalchemy бо потрібні моделі
 import uvicorn
 
 from src.database.db_connect import get_db
 from src.database.models import Contact  #, Cat, Owner
 from src.routes import contacts  # notes, tags
-from src.schemes import ContactModel, ContactResponse, CatToNameModel  # OwnerModel, OwnerResponse, CatResponse, CatModel, CatVaccinatedModel
+from src.schemes import ContactModel, ContactResponse, CatToNameModel
 
 
 app = FastAPI()  # our application
@@ -25,27 +26,29 @@ app.include_router(contacts.router, prefix='/api')
 
 
 @app.get("/")
-async def root():  # є маршрутом за замовчуванням для застосунку
+async def root() -> dict:  # є маршрутом за замовчуванням для застосунку
     return {" Welcome! ": " The personal virtual assistant is ready to go, I'm kidding ^_^ "}
 
 
 @app.get("/api/healthchecker")
-def healthchecker(db: Session = Depends(get_db)):  #  Спецкласс формує тип Session
-    """Перевірь чи піднявся контейнер(сервер БД)."""
+def healthchecker(db: Session = Depends(get_db)) -> dict:  #  Спецкласс формує тип Session
+    """Check if the container (DB server) is up."""
     try:
-        # Make request (зрозуміло що не буде зловмисного колу, але через text сирий запит треба переганяти)
+        # Make request (зрозуміло що не буде зловмисного коду, але через text сирий запит треба переганяти)
         result = db.execute(text("SELECT 1")).fetchone()  # SELECT 1 - запит до БД, що знею все Ок
         if result is None:
-            raise HTTPException(status_code=500, detail="Database is not configured correctly")
+            raise HTTPException(status_code=500, detail="Database is not configured correctly!")
+        
         return {"ALERT": "Welcome to FastAPI! System ready!"}
+    
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail="Error connecting to the database")
+        raise HTTPException(status_code=500, detail="Error connecting to the database!")
 
 
+# https://fastapi.tiangolo.com/deployment/manually/
+# https://stackoverflow.com/questions/70300675/fastapi-uvicorn-run-always-create-3-instances-but-i-want-it-1-instance
 if __name__ == "__main__":
-    # https://fastapi.tiangolo.com/deployment/manually/
-    # https://stackoverflow.com/questions/70300675/fastapi-uvicorn-run-always-create-3-instances-but-i-want-it-1-instancehttps://stackoverflow.com/questions/70300675/fastapi-uvicorn-run-always-create-3-instances-but-i-want-it-1-instance
     uvicorn.run(app, host='127.0.0.1', port=8000)  # host='0.0.0.0'
 
 

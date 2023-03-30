@@ -1,8 +1,9 @@
-# схеми для валідації наших вхідних та вихідних даних
+# Схеми для валідації наших вхідних та вихідних даних
 # Створимо моделі Pydantic, що визначають дійсну форму даних
 # Загалом, ці моделі визначають поля та правила валідації для створення, оновлення та отримання даних для...
 from datetime import date
-from pydantic import BaseModel, Field, EmailStr  # poetry add pydantic[email] # https://github.com/JoshData/python-email-validator
+from pydantic import BaseModel, Field, EmailStr  # poetry add pydantic[email] 
+# https://github.com/JoshData/python-email-validator
 
 
 # https://stackoverflow.com/questions/3768895/how-to-make-a-class-json-serializable
@@ -11,7 +12,7 @@ class ContactModel(BaseModel):
     name: str = Field(default='Unknown', min_length=2, max_length=30)
     last_name: str = Field(default='Unknown', min_length=2, max_length=40)
     email: EmailStr  # str =  Field(default='Unknown@mail.com', min_length=6, max_length=30, regex=...)  # i@i.ua
-    phone: int = Field(default=1, gt=0, le=9999999999999999)  # not started from 0 !!!
+    phone: int = Field(default=1, gt=0, le=9999999999999999)  # not started from 0 !
     birthday: date  # = Field(default=date.today())  # YYYY-MM-DD
     description: str = Field(default='-', max_length=3000)  # String
 
