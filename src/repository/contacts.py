@@ -1,22 +1,23 @@
 # функції для взаємодії з базою даних.
 from datetime import date, timedelta
-from typing import List, Optional, Type
+from typing import Optional
 
 from fastapi import HTTPException, status
-from fastapi_pagination import Page, paginate  # poetry add fastapi-pagination
-from sqlalchemy import cast, String
+from fastapi_pagination import Page  # , paginate  # poetry add fastapi-pagination
+from fastapi_pagination.ext.sqlalchemy import paginate
+# from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy import cast, func, String
 from sqlalchemy.orm import Session
 
 from src.database.models import Contact
 from src.schemes import ContactModel, CatToNameModel, ContactResponse
 
 
-async def get_contacts(limit: int,
-                       offset: int,
-                       db: Session) -> Optional[List[Contact]]:
+async def get_contacts(db: Session) -> Optional[Page[ContactResponse]]:
     """To retrieve a list of records from a database with the ability to skip 
     a certain number of records and limit the number returned."""
-    return db.query(Contact).limit(limit).offset(offset).all()
+    # return db.query(Contact).limit(limit).offset(offset).all()
+    return paginate(db.query(Contact).order_by(Contact.name))
 
 
 async def get_contact(contact_id: int,
@@ -113,56 +114,46 @@ async def search_by_phone(phone: int,
 
 # https://stackoverflow.com/questions/4926757/sqlalchemy-query-where-a-column-contains-a-substring
 async def search_by_like_name(part_name: str,
-                              db: Session) -> Optional[List[Contact]]:
+                              db: Session) -> Optional[Page[ContactResponse]]:
     """To search for an entry by a partial match in the name."""
-    return db.query(Contact).filter(Contact.name.icontains(part_name)).all()
+    return paginate(db.query(Contact).filter(Contact.name.icontains(part_name)))  # if default .all()
 
 
 async def search_by_like_last_name(part_last_name: str,
-                                   db: Session) -> Optional[List[Contact]]:
+                                   db: Session) -> Optional[Page[ContactResponse]]:
     """To search for a record by a partial match in the last name."""
-    return db.query(Contact).filter(Contact.last_name.icontains(part_last_name)).all() 
+    return paginate(db.query(Contact).filter(Contact.last_name.icontains(part_last_name))) 
 
 
 async def search_by_like_email(part_email: str,
                                db: Session) -> Optional[Page[ContactResponse]]:
     """To search for a record by a partial match in an email."""
-    return paginate(db.query(Contact).filter(Contact.email.icontains(part_email)).all())
+    return paginate(db.query(Contact).filter(Contact.email.icontains(part_email)))
 
 
 # https://stackoverflow.com/questions/23622993/postgresql-error-operator-does-not-exist-integer-character-varying
 # https://stackoverflow.com/questions/33946865/flask-sqlalchemy-postgresql-in-a-query-can-an-int-be-cast-to-a-string
 async def search_by_like_phone(part_phone: int,
-                               db: Session) -> Optional[List[Contact]]:
+                               db: Session) -> Optional[Page[ContactResponse]]:
     """To search for a record by a partial match in phone."""
-    return db.query(Contact).filter(cast(Contact.phone, String).icontains(str(part_phone))).all()
-
-
-def fortunate(days: int,
-              birthday: date,
-              today: date) -> bool:  # async/await ?
-    """Return the statement (true/false) will celebrate birthdays in the next (days) days?"""
-    happy_day: date = date(year=today.year, month=birthday.month, day=birthday.day)
-    days_left: timedelta = happy_day - today
-    if days_left.days <= 0:
-        happy_day = date(year=today.year+1, month=birthday.month, day=birthday.day)
-
-        return (happy_day - today).days <= days
-
-    return days_left.days <= days
+    return paginate(db.query(Contact).filter(cast(Contact.phone, String).icontains(str(part_phone))))
 
 
 # https://github.com/uriyyo/fastapi-pagination
 # https://uriyyo-fastapi-pagination.netlify.app/
-async def search_by_birthday_celebration_within_days(meantime: int,
-                                                     db: Session) -> Optional[List[Type[Contact]]]:
+# https://stackoverflow.com/questions/16589208/attributeerror-while-querying-neither-instrumentedattribute-object-nor-compa
+async def search_by_birthday_celebration_within_days(meantime: int,   # Optional[List[Type[Contact]]]
+                                                     db: Session) -> Optional[Page[ContactResponse]]: 
     """To find contacts celebrating birthdays in the next (meantime) days."""
-    contacts = db.query(Contact).all()
-    if not contacts:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found") 
-    current_date = date.today()
-    lucky_ones = [contact 
-                  for contact in contacts 
-                  if contact.birthday and fortunate(meantime, contact.birthday, current_date)]
+    today = date.today()
+    days_limit = date.today() + timedelta(meantime)
+    slide = 1 if days_limit.year - today.year else 0
 
-    return lucky_ones  # lucky_ones[offset:offset+limit]
+    # func.to_date(Contact.birthday.year, 'YYYY-MM-DD')
+    # func.to_char(Contact.birthday, 'MM-DD')
+    # https://stackoverflow.com/questions/12069236/sqlalchemy-select-to-date
+    # https://stackoverflow.com/questions/17333014/convert-selected-datetime-to-date-in-sqlalchemy
+    return paginate(db.query(Contact).filter(func.to_char(Contact.birthday,
+                                                          f'{slide}MM-DD') >= today.strftime(f"0%m-%d"),
+                                             func.to_char(Contact.birthday,
+                                                          '0MM-DD') <= days_limit.strftime(f"{slide}%m-%d")))

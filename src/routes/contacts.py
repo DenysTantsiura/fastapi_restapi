@@ -1,8 +1,9 @@
 # Роутер(маршрут) для модуля contacts - містить точки доступу для операцій CRUD
-from typing import List, Optional, Type
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Path, Query
-from fastapi_pagination import Page, add_pagination, paginate  # poetry add fastapi-pagination
+from fastapi import APIRouter, Depends, HTTPException, status, Path
+from fastapi_pagination import Page, add_pagination  # , paginate  # poetry add fastapi-pagination
+# from fastapi_pagination.ext.async_sqlmodel import paginate
 from sqlalchemy.orm import Session
 
 from src.database.db_connect import get_db
@@ -14,11 +15,10 @@ from src.schemes import ContactModel, ContactResponse, CatToNameModel
 router = APIRouter(prefix='/contacts')  # tags=["contacts"]
 
 
-@router.get("/", response_model=List[ContactResponse], tags=['all_contacts'])
-async def get_contacts(limit: int = Query(10, le=500),
-                       offset: int = 0,
-                       db: Session = Depends(get_db)) -> Optional[List[Contact]]:
-    contacts = await repository_contacts.get_contacts(limit, offset, db)
+# response_model=List[ContactResponse]   # limit: int = Query(10, le=500), offset: int = 0,
+@router.get("/", response_model=Page[ContactResponse], tags=['all_contacts'])
+async def get_contacts(db: Session = Depends(get_db)) -> Optional[List[Contact]]:
+    contacts = await repository_contacts.get_contacts(db)  # limit, offset, 
 
     return contacts
 
@@ -115,37 +115,37 @@ async def search_by_phone(phone: int,
 
 @router.get("/search_by_birthday_celebration_within_days/{days}", response_model=Page[ContactResponse], tags=['search'])
 async def search_by_birthday_celebration_within_days(days: int,
-                                                     db: Session = Depends(get_db)) -> Optional[List[Type[Contact]]]:
+                                                     db: Session = Depends(get_db)) -> Page[ContactResponse]:
     contact = await repository_contacts.search_by_birthday_celebration_within_days(days, db)
     if contact is None:  # NoConnection in database...
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
     
-    return paginate(contact)
+    return contact  # paginate(contact)
 
 
 @router.get("/search_by_like_name/{name}", response_model=Page[ContactResponse], tags=['search'])
 async def search_by_like_name(name: str,
-                              db: Session = Depends(get_db)) -> Optional[List[Contact]]:
+                              db: Session = Depends(get_db)) -> Page[ContactResponse]:
     contact = await repository_contacts.search_by_like_name(name, db)
     if contact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
     
-    return paginate(contact)
+    return contact
 
 
 @router.get("/search_by_like_last_name/{last_name}", response_model=Page[ContactResponse], tags=['search'])
 async def search_by_like_last_name(last_name: str,
-                                   db: Session = Depends(get_db)) -> Optional[List[Contact]]:
+                                   db: Session = Depends(get_db)) -> Page[ContactResponse]:
     contact = await repository_contacts.search_by_like_last_name(last_name, db)
     if contact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
     
-    return paginate(contact)
+    return contact
 
 
 @router.get("/search_by_like_email/{email}", response_model=Page[ContactResponse], tags=['search'])
 async def search_by_like_email(email: str,
-                               db: Session = Depends(get_db)) -> Optional[List[Contact]]:
+                               db: Session = Depends(get_db)) -> Page[ContactResponse]:
     contact = await repository_contacts.search_by_like_email(email, db)
     if contact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
@@ -155,12 +155,12 @@ async def search_by_like_email(email: str,
 
 @router.get("/search_by_like_phone/{phone}", response_model=Page[ContactResponse], tags=['search'])
 async def search_by_like_phone(phone: int,
-                               db: Session = Depends(get_db)) -> Optional[List[Contact]]:
+                               db: Session = Depends(get_db)) -> Page[ContactResponse]:
     contact = await repository_contacts.search_by_like_phone(phone, db)
     if contact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact Not Found")
     
-    return paginate(contact)
+    return contact
 
 
 add_pagination(router)
